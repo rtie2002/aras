@@ -23,7 +23,7 @@ def start_training():
         data=data_path, 
         epochs=120, 
         imgsz=640, 
-        batch=8,        # Adjusted for safety (RTX 4090 can handle 16 or 32, but 8 is safe)
+        batch=32,       # Optimized for RTX 4090 (24GB VRAM)
         device=0,       # Use the first GPU
         patience=25,    # Early stopping if no improvement
         project='RoadDetectionModel',
