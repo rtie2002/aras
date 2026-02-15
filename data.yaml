@@ -1,3 +1,4 @@
+path: .
 train: Aras_v2ds/train/images
 val: Aras_v2ds/valid/images
 test: Aras_v2ds/test/images
