@@ -1,7 +1,7 @@
-path: .
-train: Aras_v2ds/train/images
-val: Aras_v2ds/valid/images
-test: Aras_v2ds/test/images
+path: \\wsl.localhost\raymond\home\raymond\projects\aras\Aras_v2ds
+train: train/images
+val: valid/images
+test: test/images
 
 nc: 6
 names: ['vehicles', 'person', 'pothole', 'speedbump', 'road sign', 'traffic light']
