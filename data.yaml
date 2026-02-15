@@ -2,12 +2,5 @@ train: ../dataset/train/images
 val: ../dataset/valid/images
 test: ../dataset/test/images
 
-nc: 10
-names: ['Bus', 'HeavyTruck', 'MediumTruck', 'PickupTruck', 'Pothole', 'SaloonCar', 'Speedbumps Detection 2 - v2 2024-06-18 11-27pm', 'TrailerTruck', 'TwoWheeler', 'VanMiniBus']
-
-roboflow:
-  workspace: aras-v2kaa
-  project: aras-hetlu
-  version: 1
-  license: CC BY 4.0
-  url: https://universe.roboflow.com/aras-v2kaa/aras-hetlu/dataset/1
+nc: 5
+names: ['person', 'vehicles', 'two wheeler', 'pothole', 'speed bump']
