@@ -1,6 +1,7 @@
 from ultralytics import YOLO
 import cv2
 import os
+import torch
 
 def detect_video_realtime():
     # 1. Path to your best model weights
@@ -19,6 +20,7 @@ def detect_video_realtime():
     # model.to('cuda') - Removed to avoid "Torch not compiled with CUDA enabled" error
 
     # 4. Open Video
+    print(f"Opening video: {video_input_path}")
     cap = cv2.VideoCapture(video_input_path)
     if not cap.isOpened():
         print(f"Error: Could not open video {video_input_path}")
