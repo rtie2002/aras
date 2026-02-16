@@ -1,4 +1,4 @@
-path: \\wsl.localhost\raymond\home\raymond\projects\aras\Aras_v2ds
+path: \\wsl.localhost\raymond\home\raymond\projects\aras\datasets
 train: train/images
 val: valid/images
 test: test/images
