@@ -44,9 +44,10 @@ def detect_video_realtime():
     frame_count = 0
     start_time = time.time()
     annotated_frame = None
+    count_text = ""
+    current_counts = {}
     
     while cap.isOpened():
-        # Read the frame
         success, frame = cap.read()
         if not success:
             break
@@ -55,60 +56,86 @@ def detect_video_realtime():
         
         # Only run detection on every 'stride' frame
         if frame_count % stride == 0:
-            # Run inference (allowing auto-device selection)
-            results = model.predict(frame, conf=0.30, half=False, verbose=False, imgsz=480)
-            annotated_frame = results[0].plot()
+            results = model.predict(frame, conf=0.30, half=True if torch.cuda.is_available() else False, verbose=False, imgsz=480)
             
-            # --- Object Counting Logic ---
-            counts = results[0].boxes.cls.unique().tolist() # Get unique class indices
-            class_names = results[0].names
+            # --- Autopilot Style Metadata Extraction ---
             current_counts = {}
-            
-            # Count occurrences of each class in the current frame
+            class_names = results[0].names
             for cls_idx in results[0].boxes.cls.cpu().numpy():
                 name = class_names[int(cls_idx)]
                 current_counts[name] = current_counts.get(name, 0) + 1
             
-            # Store count string to display on subsequent frames
-            count_text = " | ".join([f"{name}: {count}" for name, count in current_counts.items()])
-            if not count_text: count_text = "No objects detected"
-            # ---------------------------
-
-        # Display (show annotated if ready, else original)
+            # Get original detections but custom plot them later or use .plot() as base
+            annotated_frame = results[0].plot(labels=True, conf=True, boxes=True)
+        
+        # --- HUD RENDERING ---
         if annotated_frame is not None:
             display_frame = annotated_frame.copy()
-            
-            # Draw the counts on the frame (top left corner)
-            if 'count_text' in locals():
-                # Background rectangle for better readability
-                cv2.rectangle(display_frame, (10, 10), (int(len(count_text)*18) + 20, 45), (0, 0, 0), -1)
-                # Text
-                cv2.putText(display_frame, count_text, (15, 35), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         else:
-            display_frame = frame
+            display_frame = frame.copy()
 
-        # Ensure display_frame is valid before imshow
-        if display_frame is not None and display_frame.size > 0:
-            cv2.imshow("YOLOv8 Speed Bump Detection (120 FPS Video)", display_frame)
+        # 1. Create Transparent HUD Overlays (Top and Bottom)
+        overlay = display_frame.copy()
+        h, w, _ = display_frame.shape
+        cv2.rectangle(overlay, (0, 0), (w, 60), (20, 20, 20), -1) # Header
+        cv2.rectangle(overlay, (0, h-40), (w, h), (20, 20, 20), -1) # Footer
+        cv2.addWeighted(overlay, 0.6, display_frame, 0.4, 0, display_frame)
+
+        # 2. Header: System Status
+        cv2.putText(display_frame, "AUTOPILOT SYSTEM v1.2", (20, 40), 
+                    cv2.FONT_HERSHEY_DUPLEX, 0.8, (0, 255, 255), 2)
         
-        # Timing control to match 120fps playback
+        # System Time / Status
+        status_color = (0, 255, 0) if len(current_counts) > 0 else (200, 200, 200)
+        cv2.putText(display_frame, "STATUS: TRACKING ACTIVE", (w - 320, 40), 
+                    cv2.FONT_HERSHEY_DUPLEX, 0.7, status_color, 2)
+
+        # 3. Sidebar: Object Tracking List
+        y_offset = 110
+        cv2.putText(display_frame, "ENVIRONMENT SCAN:", (20, 90), 
+                    cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1)
+        
+        for name, count in current_counts.items():
+            # Dashboard style entries
+            cv2.rectangle(display_frame, (20, y_offset-20), (200, y_offset+10), (50, 50, 50), -1)
+            cv2.putText(display_frame, f"{name.upper()}: {count}", (30, y_offset), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+            y_offset += 40
+
+        # 4. CRITICAL WARNING: Speed Bump Alert
+        if 'speed bump' in [k.lower() for k in current_counts.keys()]:
+            # Flashing Alert logic based on frame_count
+            if (frame_count // 5) % 2 == 0:
+                # Warning Box in Center-Top
+                cv2.rectangle(display_frame, (w//2 - 200, 80), (w//2 + 200, 140), (0, 0, 255), -1)
+                cv2.putText(display_frame, "WARNING: SPEED BUMP AHEAD", (w//2 - 180, 120), 
+                            cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 255, 255), 2)
+                # Draw dynamic scanning lines to the bump
+                cv2.line(display_frame, (w//2, h-40), (w//2, 140), (0, 0, 255), 1)
+
+        # 5. Footer: Performance Metrics
         current_playback_time = frame_count * frame_delay
         actual_elapsed_time = time.time() - start_time
+        fps_real = frame_count / actual_elapsed_time if actual_elapsed_time > 0 else 0
         
-        wait_time = 1 # minimum wait
+        cv2.putText(display_frame, f"SENSORS: CAMERA_01 | RESOLUTION: {w}x{h} | PROC_FPS: {fps_real:.1f}", 
+                    (20, h-12), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 180, 180), 1)
+
+        # Display Final HUD
+        cv2.imshow("Autopilot Vision - Speed Bump Detection", display_frame)
+        
+        # Timing control
+        wait_time = 1
         if actual_elapsed_time < current_playback_time:
-            # We are faster than the video, wait a bit
-            wait_time = int((current_playback_time - actual_elapsed_time) * 1000)
-            wait_time = max(1, wait_time)
+            wait_time = max(1, int((current_playback_time - actual_elapsed_time) * 1000))
         
         if cv2.waitKey(wait_time) & 0xFF == ord('q'):
             break
 
-        # catching up logic: if we are too slow, grab next frames until we are on time
+        # Catch-up logic
         actual_elapsed_time = time.time() - start_time
         while actual_elapsed_time > current_playback_time + frame_delay:
-            cap.grab() # Skip decoding for speed
+            cap.grab()
             frame_count += 1
             current_playback_time = frame_count * frame_delay
             actual_elapsed_time = time.time() - start_time
