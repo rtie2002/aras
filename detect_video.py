@@ -58,16 +58,33 @@ def detect_video_realtime():
             # Run inference (allowing auto-device selection)
             results = model.predict(frame, conf=0.30, half=False, verbose=False, imgsz=480)
             annotated_frame = results[0].plot()
-        else:
-            # For intermediate frames, just show the original or the last detection
-            # To save performance, we just show the annotated frame from the last detection
-            # or if you want it very smooth, just the original frame.
-            # Let's just keep the last annotated frame to avoid flickering
-            pass
+            
+            # --- Object Counting Logic ---
+            counts = results[0].boxes.cls.unique().tolist() # Get unique class indices
+            class_names = results[0].names
+            current_counts = {}
+            
+            # Count occurrences of each class in the current frame
+            for cls_idx in results[0].boxes.cls.cpu().numpy():
+                name = class_names[int(cls_idx)]
+                current_counts[name] = current_counts.get(name, 0) + 1
+            
+            # Store count string to display on subsequent frames
+            count_text = " | ".join([f"{name}: {count}" for name, count in current_counts.items()])
+            if not count_text: count_text = "No objects detected"
+            # ---------------------------
 
         # Display (show annotated if ready, else original)
         if annotated_frame is not None:
-            display_frame = annotated_frame
+            display_frame = annotated_frame.copy()
+            
+            # Draw the counts on the frame (top left corner)
+            if 'count_text' in locals():
+                # Background rectangle for better readability
+                cv2.rectangle(display_frame, (10, 10), (int(len(count_text)*18) + 20, 45), (0, 0, 0), -1)
+                # Text
+                cv2.putText(display_frame, count_text, (15, 35), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         else:
             display_frame = frame
 
