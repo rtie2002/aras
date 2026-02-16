@@ -65,8 +65,15 @@ def detect_video_realtime():
             # Let's just keep the last annotated frame to avoid flickering
             pass
 
-        # Display (we update display every frame to keep 120fps feel)
-        cv2.imshow("YOLOv8 Speed Bump Detection (120 FPS Video)", annotated_frame if 'annotated_frame' in locals() else frame)
+        # Display (show annotated if ready, else original)
+        if annotated_frame is not None:
+            display_frame = annotated_frame
+        else:
+            display_frame = frame
+
+        # Ensure display_frame is valid before imshow
+        if display_frame is not None and display_frame.size > 0:
+            cv2.imshow("YOLOv8 Speed Bump Detection (120 FPS Video)", display_frame)
         
         # Timing control to match 120fps playback
         current_playback_time = frame_count * frame_delay
