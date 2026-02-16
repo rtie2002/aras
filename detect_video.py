@@ -13,10 +13,10 @@ def detect_video_realtime():
         print(f"Error: Model not found at {model_path}")
         return
 
-    # 3. Load the model and force GPU
+    # 3. Load the model
     print(f"Loading model: {model_path}")
     model = YOLO(model_path)
-    model.to('cuda') # Ensure it's on the RTX 4090
+    # model.to('cuda') - Removed to avoid "Torch not compiled with CUDA enabled" error
 
     # 4. Open Video
     cap = cv2.VideoCapture(video_input_path)
@@ -43,6 +43,7 @@ def detect_video_realtime():
     
     frame_count = 0
     start_time = time.time()
+    annotated_frame = None
     
     while cap.isOpened():
         # Read the frame
@@ -54,8 +55,8 @@ def detect_video_realtime():
         
         # Only run detection on every 'stride' frame
         if frame_count % stride == 0:
-            # Run inference (using imgsz=480 for extreme speed on 120fps video)
-            results = model.predict(frame, conf=0.30, half=True, verbose=False, device=0, imgsz=480)
+            # Run inference (allowing auto-device selection)
+            results = model.predict(frame, conf=0.30, half=False, verbose=False, imgsz=480)
             annotated_frame = results[0].plot()
         else:
             # For intermediate frames, just show the original or the last detection
